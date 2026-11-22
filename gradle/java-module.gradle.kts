@@ -68,7 +68,9 @@ tasks.register("testAllJdks") {
     dependsOn(tasks.withType<Test>())
 }
 
-// Publishing. POM url, scm and developers are added once the repository is public.
+// Publishing to GitHub Packages. Credentials come only from the GitHubPackagesUsername and
+// GitHubPackagesPassword properties (set by the release workflow from GITHUB_TOKEN).
+val repositoryUrl = "https://github.com/niohive/infisical-java-sdk"
 configure<PublishingExtension> {
     publications {
         create<MavenPublication>("maven") {
@@ -76,13 +78,38 @@ configure<PublishingExtension> {
             pom {
                 name.set(project.name)
                 description.set(provider { project.description })
+                url.set(repositoryUrl)
                 licenses {
                     license {
                         name.set("MIT License")
                         url.set("https://opensource.org/license/mit")
                     }
                 }
+                organization {
+                    name.set("NioHive")
+                    url.set("https://github.com/niohive")
+                }
+                developers {
+                    developer {
+                        id.set("niohive")
+                        name.set("NioHive")
+                        organization.set("NioHive")
+                        organizationUrl.set("https://github.com/niohive")
+                    }
+                }
+                scm {
+                    url.set(repositoryUrl)
+                    connection.set("scm:git:$repositoryUrl.git")
+                    developerConnection.set("scm:git:$repositoryUrl.git")
+                }
             }
+        }
+    }
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/niohive/infisical-java-sdk")
+            credentials(PasswordCredentials::class)
         }
     }
 }
