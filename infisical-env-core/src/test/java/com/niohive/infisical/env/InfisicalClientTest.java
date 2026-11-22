@@ -11,6 +11,7 @@ import com.niohive.infisical.env.FakeInfisical.Request;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -281,6 +282,22 @@ class InfisicalClientTest {
         } finally {
             pool.shutdownNow();
         }
+    }
+
+    @Test
+    void readmeQuickStart() {
+        fake.secrets(200, "{\"secrets\":[{\"secretKey\":\"DB_PASSWORD\",\"secretValue\":\"pw\"}]}");
+
+        // The README's quick start, with env::get in place of the process environment.
+        Map<String, String> secrets = InfisicalSettings.from(env::get)
+                .map(new InfisicalClient()::fetchSecrets)
+                .orElse(Collections.emptyMap());
+
+        assertEquals("pw", secrets.get("DB_PASSWORD"));
+        env.remove("INFISICAL_CLIENT_ID");
+        assertEquals(Collections.emptyMap(), InfisicalSettings.from(env::get)
+                .map(new InfisicalClient()::fetchSecrets)
+                .orElse(Collections.emptyMap()));
     }
 
     @Test
