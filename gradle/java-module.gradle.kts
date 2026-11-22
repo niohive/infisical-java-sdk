@@ -24,7 +24,10 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.named<Javadoc>("javadoc") {
     exclude("**/internal/**")
-    (options as StandardJavadocDocletOptions).addBooleanOption("Xdoclint:all", true)
+    (options as StandardJavadocDocletOptions).apply {
+        addBooleanOption("Xdoclint:all,-missing", true)
+        addBooleanOption("Werror", true)
+    }
 }
 
 tasks.withType<AbstractArchiveTask>().configureEach {
