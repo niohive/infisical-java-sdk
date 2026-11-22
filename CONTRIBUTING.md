@@ -24,7 +24,7 @@ Thanks for helping. This project is deliberately small: it does one job, with no
 - **Keep the core on Java 8.** It's compiled with `--release 8`, and its tests run on a real JDK 8.
 - **Never leak secrets.** No secret, client ID, client secret or token may reach an exception message, `toString()` or a log line. Tests use marker values to check this.
 - **Small, focused commits**, in [Conventional Commits](https://www.conventionalcommits.org/) style: `feat:`, `fix:`, `test:`, `build:`, `docs:`, `ci:`.
-- **Branches:** create a feature branch from `develop` and open the pull request against `develop`. Releases go from `develop` to `main`.
+- **Branches:** create a feature branch from `develop` and open the pull request against `develop`. Releases go from `develop` to `monster`, the default branch, where CI runs.
 - Update `CHANGELOG.md` under `Unreleased` for any user-visible change.
 
 ## Dependencies
