@@ -1,0 +1,31 @@
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    # Let new releases age before proposing them.
+    cooldown:
+      default-days: 14
+    groups:
+      gradle-minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Compile against the lowest supported Boot 4 minor; still take its patches.
+      - dependency-name: "org.springframework.boot:*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # JUnit 6 needs Java 17, but the core's tests run on Java 8.
+      - dependency-name: "org.junit*"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: develop
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    groups:
+      github-actions:
+        patterns: ["*"]
