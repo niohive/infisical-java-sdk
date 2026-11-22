@@ -1,8 +1,16 @@
 name: Release
 
+# A tag push publishes to GitHub Packages, then Maven Central.
+# A manual run publishes an existing tag to Maven Central only.
 on:
   push:
     tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish to Maven Central only, e.g. v1.0.0"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -10,22 +18,25 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     permissions:
       contents: read
       packages: write
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
     steps:
+      - name: Check the tag format
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "The tag must look like v1.2.3"; exit 1; }
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: refs/tags/${{ env.TAG }}
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Check the tag
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "The tag must look like v1.2.3"; exit 1; }
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/monster || { echo "The tag must be on monster"; exit 1; }
+      - name: Check the tag is on monster
+        run: git merge-base --is-ancestor HEAD origin/monster || { echo "The tag must be on monster"; exit 1; }
 
       - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
@@ -43,13 +54,66 @@ jobs:
           cache-disabled: true
 
       - name: Build and test on every supported JDK
-        env:
-          TAG: ${{ github.ref_name }}
         run: ./gradlew build testAllJdks -Pversion="${TAG#v}"
 
       - name: Publish to GitHub Packages
+        if: github.event_name == 'push'
         env:
-          TAG: ${{ github.ref_name }}
           ORG_GRADLE_PROJECT_GitHubPackagesUsername: ${{ github.actor }}
           ORG_GRADLE_PROJECT_GitHubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew publishAllPublicationsToGitHubPackagesRepository -Pversion="${TAG#v}"
+
+      # Central wants the Maven layout with a .asc signature, .md5 and .sha1 for every file.
+      # Done here rather than in Gradle so any existing tag can be published as it is.
+      - name: Make the Maven Central bundle
+        env:
+          GPG_KEY: ${{ secrets.MVNC_GPG_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.MVNC_GPG_PASSPHRASE }}
+        run: |
+          repo="$RUNNER_TEMP/central"
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          install -d -m 700 "$GNUPGHOME"
+          trap 'gpgconf --kill gpg-agent; rm -rf "$GNUPGHOME"' EXIT
+          ./gradlew publishToMavenLocal -Pversion="${TAG#v}" -Dmaven.repo.local="$repo"
+          find "$repo" -name 'maven-metadata*' -delete
+          printf '%s\n' "$GPG_KEY" | gpg --batch --quiet --import
+          mapfile -t files < <(find "$repo" -type f | sort)
+          for f in "${files[@]}"; do
+            printf '%s' "$GPG_PASSPHRASE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --armor --detach-sign "$f"
+            gpg --batch --quiet --verify "$f.asc" "$f"
+            md5sum "$f" | cut -d' ' -f1 | tr -d '\n' > "$f.md5"
+            sha1sum "$f" | cut -d' ' -f1 | tr -d '\n' > "$f.sha1"
+          done
+          (cd "$repo" && zip -qr "$RUNNER_TEMP/central-bundle.zip" .)
+          unzip -l "$RUNNER_TEMP/central-bundle.zip"
+
+      - name: Publish to Maven Central
+        env:
+          MVNC_USERNAME: ${{ secrets.MVNC_USERNAME }}
+          MVNC_PASSWORD: ${{ secrets.MVNC_PASSWORD }}
+        run: |
+          token=$(printf '%s:%s' "$MVNC_USERNAME" "$MVNC_PASSWORD" | base64 -w0)
+          echo "::add-mask::$token"
+          api=https://central.sonatype.com/api/v1/publisher
+          id=$(curl -sS --fail-with-body -X POST -H "Authorization: Bearer $token" \
+            --form "bundle=@$RUNNER_TEMP/central-bundle.zip" \
+            "$api/upload?name=infisical-java-sdk-${TAG#v}&publishingType=AUTOMATIC") || { echo "Upload failed: $id"; exit 1; }
+          [[ "$id" =~ ^[0-9a-f-]+$ ]] || { echo "Unexpected upload response"; exit 1; }
+          echo "Deployment $id"
+          state=""
+          for _ in $(seq 270); do
+            status=$(curl -sS --fail-with-body -X POST -H "Authorization: Bearer $token" "$api/status?id=$id") || { echo "Status check failed: $status"; exit 1; }
+            state=$(jq -r .deploymentState <<<"$status")
+            echo "$state"
+            case "$state" in
+              PUBLISHED) exit 0 ;;
+              FAILED) jq .errors <<<"$status"; exit 1 ;;
+            esac
+            sleep 10
+          done
+          if [[ "$state" == PUBLISHING ]]; then
+            echo "::notice::Validated; Maven Central is still publishing deployment $id"
+            exit 0
+          fi
+          echo "Deployment $id is still $state after 45 minutes; check it in the Central Portal"
+          exit 1
