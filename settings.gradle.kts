@@ -7,4 +7,4 @@ dependencyResolutionManagement {
     repositoriesMode = RepositoriesMode.FAIL_ON_PROJECT_REPOS
 }
 
-include("infisical-env-core", "infisical-env-spring-boot4")
+include("core", "spring-sdk")

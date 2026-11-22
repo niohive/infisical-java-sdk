@@ -76,7 +76,7 @@ configure<PublishingExtension> {
         create<MavenPublication>("maven") {
             from(components["java"])
             pom {
-                name.set(project.name)
+                name.set("${rootProject.name} ${project.name}")
                 description.set(provider { project.description })
                 url.set(repositoryUrl)
                 licenses {

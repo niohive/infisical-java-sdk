@@ -29,7 +29,7 @@ Thanks for helping. This project is deliberately small: it does one job, with no
 
 ## Dependencies
 
-- `infisical-env-core` never gets a runtime dependency. `verifyPublishedDependencies` fails the build if one appears.
+- `core` never gets a runtime dependency. `verifyPublishedDependencies` fails the build if one appears.
 - A new test or build dependency needs a good reason in the pull request.
 - Dependencies are locked, and their SHA-256 checksums are verified. After changing one, regenerate both:
 
