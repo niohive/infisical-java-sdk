@@ -1,10 +1,10 @@
-# infisical-env
+# infisical-java-sdk
 
 Loads secrets from [Infisical](https://infisical.com) at startup, for any Java 8+ application, with an optional Spring Boot 4 adapter.
 
 > Releases are published to [GitHub Packages](https://github.com/orgs/niohive/packages?repo_name=infisical-java-sdk). They aren't on Maven Central yet.
 
-`infisical-env` is an independent client. It is not affiliated with or endorsed by Infisical, Inc.
+`infisical-java-sdk` is an independent client. It is not affiliated with or endorsed by Infisical, Inc.
 
 ## Why
 
@@ -16,8 +16,8 @@ Loads secrets from [Infisical](https://infisical.com) at startup, for any Java 8
 
 | Artifact | Use it for | Requires |
 | --- | --- | --- |
-| `com.niohive:infisical-env-core` | Plain Java, or any framework | Java 8+ |
-| `com.niohive:infisical-env-spring-boot4` | Spring Boot 4 (includes the core) | Java 17+, Spring Boot 4.x |
+| `com.niohive.infisical:core` | Plain Java, or any framework | Java 8+ |
+| `com.niohive.infisical:spring-sdk` | Spring Boot 4 (includes the core) | Java 17+, Spring Boot 4.x |
 
 ### Getting the artifacts from GitHub Packages
 
@@ -42,14 +42,14 @@ repositories {
             password = providers.gradleProperty("gpr.key").get()
         }
         // Only ever look up this library here.
-        content { includeGroup("com.niohive") }
+        content { includeGroup("com.niohive.infisical") }
     }
 }
 
 dependencies {
-    implementation("com.niohive:infisical-env-core:1.0.0")
+    implementation("com.niohive.infisical:core:1.0.0")
     // or, for Spring Boot 4:
-    implementation("com.niohive:infisical-env-spring-boot4:1.0.0")
+    implementation("com.niohive.infisical:spring-sdk:1.0.0")
 }
 ```
 
@@ -79,8 +79,8 @@ Then, in `pom.xml`:
 
 <dependencies>
   <dependency>
-    <groupId>com.niohive</groupId>
-    <artifactId>infisical-env-core</artifactId>
+    <groupId>com.niohive.infisical</groupId>
+    <artifactId>core</artifactId>
     <version>1.0.0</version>
   </dependency>
 </dependencies>
@@ -120,7 +120,7 @@ Map<String, String> secrets = InfisicalSettings.fromSystemEnvironment()
 
 ## Spring Boot 4
 
-Add `infisical-env-spring-boot4`. Nothing else is needed: it registers an `EnvironmentPostProcessor` that loads the secrets before the application context starts, so placeholders such as `${DB_PASSWORD}` in `application.yaml` resolve from Infisical.
+Add `spring-sdk`. Nothing else is needed: it registers an `EnvironmentPostProcessor` that loads the secrets before the application context starts, so placeholders such as `${DB_PASSWORD}` in `application.yaml` resolve from Infisical.
 
 Precedence: process environment variables > Infisical > `application.yaml`. The secrets are in a property source named `infisical`.
 
@@ -128,13 +128,13 @@ At startup it logs either `Infisical not configured (INFISICAL_CLIENT_ID unset);
 
 ## Spring Boot 2.x and 3.x
 
-There's no adapter for these versions. Add `infisical-env-core` and this class, which works on Java 8 with Boot 2.4+ and 3.x:
+There's no adapter for these versions. Add `core` and this class, which works on Java 8 with Boot 2.4+ and 3.x:
 
 ```java
 package com.example.config;
 
-import com.niohive.infisical.env.InfisicalClient;
-import com.niohive.infisical.env.InfisicalSettings;
+import com.niohive.infisical.InfisicalClient;
+import com.niohive.infisical.InfisicalSettings;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
