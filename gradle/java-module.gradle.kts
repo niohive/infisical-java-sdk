@@ -150,8 +150,8 @@ val verifyPublishedDependencies = tasks.register("verifyPublishedDependencies") 
 }
 tasks.named("check") { dependsOn(verifyPublishedDependencies) }
 
-// Dependency locking. Regenerate with:
-//   ./gradlew --write-verification-metadata sha256 resolveAndLockAll --write-locks build
+// Dependency locking. Regenerate locks and verification metadata from an empty Gradle user home;
+// see CONTRIBUTING.md.
 dependencyLocking { lockAllConfigurations() }
 tasks.register("resolveAndLockAll") {
     description = "Resolves every resolvable configuration so --write-locks records it."

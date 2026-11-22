@@ -204,11 +204,7 @@ Gradle runs on JDK 17 or newer (21 recommended). The full test matrix also needs
 ./gradlew testAllJdks    # run the tests on every supported JDK
 ```
 
-Dependencies are locked, and their SHA-256 checksums are verified. After changing a dependency, regenerate both and review the diff:
-
-```sh
-./gradlew --write-verification-metadata sha256 resolveAndLockAll --write-locks build
-```
+Dependencies are locked, and their SHA-256 checksums are verified. [CONTRIBUTING.md](CONTRIBUTING.md#dependencies) explains how to update them.
 
 ## Contributing
 
