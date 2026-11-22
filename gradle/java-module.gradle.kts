@@ -35,6 +35,12 @@ tasks.withType<AbstractArchiveTask>().configureEach {
     isReproducibleFileOrder = true
 }
 
+// MIT asks for the notice in every copy, so every jar (classes, sources, javadoc) carries it.
+val licenseFile = rootProject.file("LICENSE")
+tasks.withType<Jar>().configureEach {
+    from(licenseFile) { into("META-INF") }
+}
+
 // JDK test matrix: the default test task runs on the 17 toolchain, testJavaN on JDK N.
 val sourceSets = the<SourceSetContainer>()
 val toolchains = the<JavaToolchainService>()
