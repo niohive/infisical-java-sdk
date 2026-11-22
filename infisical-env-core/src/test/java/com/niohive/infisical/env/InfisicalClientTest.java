@@ -5,10 +5,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import com.niohive.infisical.env.FakeInfisical.Mode;
 import com.niohive.infisical.env.FakeInfisical.Request;
 import java.io.IOException;
+import java.net.Authenticator;
+import java.net.PasswordAuthentication;
 import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -123,6 +126,57 @@ class InfisicalClientTest {
     }
 
     @Test
+    void aServerThatDripsHeadersHitsTheOverallDeadline() throws Exception {
+        try (ServerSocket server = new ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress())) {
+            Thread dripper = new Thread(() -> {
+                try (java.net.Socket socket = server.accept()) {
+                    java.io.OutputStream out = socket.getOutputStream();
+                    out.write("HTTP/1.1 200 OK\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+                    for (int i = 0; i < 100; i++) {
+                        out.write("X-A: b\r\n".getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+                        out.flush();
+                        Thread.sleep(100);
+                    }
+                } catch (Exception clientWentAway) {
+                    // expected once the client gives up
+                }
+            });
+            dripper.setDaemon(true);
+            dripper.start();
+            env.put("INFISICAL_URL", "http://127.0.0.1:" + server.getLocalPort());
+
+            long start = System.nanoTime();
+            assertMessageStartsWith("Couldn't reach Infisical to log in: ");
+            assertTrue(millisSince(start) < 3_000, "took " + millisSince(start) + " ms");
+        }
+    }
+
+    @Test
+    void aJvmWideAuthenticatorNeverSendsItsCredentialsToInfisical() {
+        assumeFalse("1.8".equals(System.getProperty("java.specification.version")),
+                "Java 8 has no per-connection authenticator; documented in the README");
+        Authenticator.setDefault(new Authenticator() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                return new PasswordAuthentication("corp-user", "CORP-PASSWORD".toCharArray());
+            }
+        });
+        try {
+            fake.mode(Mode.WWW_AUTHENTICATE);
+            assertMessage("Infisical failed to log in (HTTP 401): bad creds");
+            fake.mode(Mode.LIST_CHALLENGE);
+            assertMessage("Infisical failed to list secrets (HTTP 401): bad creds");
+        } finally {
+            Authenticator.setDefault(null);
+        }
+        assertEquals(3, fake.requests().size(), "no retries with credentials");
+        for (Request r : fake.requests()) {
+            String auth = r.header("Authorization");
+            assertTrue(auth == null || auth.equals("Bearer " + FakeInfisical.TOKEN), r.path + " " + auth);
+        }
+    }
+
+    @Test
     void redirectsAreNeverFollowed() {
         fake.mode(Mode.REDIRECT);
         assertMessage("Infisical failed to log in (HTTP 302)");
@@ -195,6 +249,12 @@ class InfisicalClientTest {
         for (char c : suffix.toCharArray()) {
             assertFalse(Character.isISOControl(c) || c == ' ' || c == ' ', "char " + (int) c);
         }
+    }
+
+    @Test
+    void infisicalsMessageLosesInvisibleFormatCharacters() {
+        fake.login(400, "{\"message\":\"admin\\u202Eexe.\\u200Btxt\"}");
+        assertMessage("Infisical failed to log in (HTTP 400): adminexe.txt");
     }
 
     @Test

@@ -43,8 +43,10 @@ public final class FakeInfisical implements AutoCloseable {
         REDIRECT,
         /** Answers 200 with a body one byte over 16 MiB. */
         HUGE,
-        /** Answers 401 with {@code WWW-Authenticate: Bearer} and {"message":"bad creds"}. */
-        WWW_AUTHENTICATE
+        /** Answers the login with 401, {@code WWW-Authenticate: Basic} and {"message":"bad creds"}. */
+        WWW_AUTHENTICATE,
+        /** Logs in normally, then answers the list call with 401, {@code WWW-Authenticate: Basic} and {"message":"bad creds"}. */
+        LIST_CHALLENGE
     }
 
     /** One recorded request. Header names are lower case. */
@@ -169,7 +171,10 @@ public final class FakeInfisical implements AutoCloseable {
             } else if (path.equals(LOGIN_PATH) && "POST".equals(exchange.getRequestMethod())) {
                 handleLogin(exchange);
             } else if (path.equals(SECRETS_PATH) && "GET".equals(exchange.getRequestMethod())) {
-                if (!("Bearer " + TOKEN).equals(exchange.getRequestHeaders().getFirst("Authorization"))) {
+                if (mode == Mode.LIST_CHALLENGE) {
+                    exchange.getResponseHeaders().add("WWW-Authenticate", "Basic realm=\"infisical\"");
+                    respond(exchange, 401, "{\"message\":\"bad creds\"}");
+                } else if (!("Bearer " + TOKEN).equals(exchange.getRequestHeaders().getFirst("Authorization"))) {
                     respond(exchange, 401, "{\"message\":\"wrong token\"}");
                 } else {
                     respond(exchange, secretsStatus, secretsBody);
@@ -223,7 +228,7 @@ public final class FakeInfisical implements AutoCloseable {
                 }
                 break;
             case WWW_AUTHENTICATE:
-                exchange.getResponseHeaders().add("WWW-Authenticate", "Bearer");
+                exchange.getResponseHeaders().add("WWW-Authenticate", "Basic realm=\"infisical\"");
                 respond(exchange, 401, "{\"message\":\"bad creds\"}");
                 break;
             default:
