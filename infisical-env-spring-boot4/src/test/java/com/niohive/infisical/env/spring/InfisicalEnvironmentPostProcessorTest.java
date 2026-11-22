@@ -127,6 +127,21 @@ class InfisicalEnvironmentPostProcessorTest {
         assertTrue(e.getMessage().startsWith("Couldn't reach Infisical to log in"), e.getMessage());
     }
 
+    @Test
+    void anUnresolvablePlaceholderInACredentialIsNeverEchoed() {
+        Map<String, Object> vars = new HashMap<>(configured());
+        vars.put("INFISICAL_CLIENT_SECRET", "SECRET-${MARKER}-x");
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> postProcessor().postProcessEnvironment(environment(vars), null));
+
+        assertEquals("INFISICAL_CLIENT_SECRET contains a ${...} placeholder that can't be resolved", e.getMessage());
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            assertFalse(String.valueOf(t.getMessage()).contains("SECRET-"), t.toString());
+        }
+        assertTrue(fake.requests().isEmpty());
+    }
+
     // ---- B13: placement ----
 
     @Test

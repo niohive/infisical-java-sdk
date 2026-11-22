@@ -119,7 +119,10 @@ public final class InfisicalClient {
         return new InfisicalException("Infisical returned an unreadable response to " + action, cause);
     }
 
-    /** ": message" when the body has a non-blank message; cut and stripped of control characters. */
+    /**
+     * ": message" when the body has a non-blank message; cut to 200 characters and stripped of control,
+     * line-separator and invisible format characters (bidi overrides, zero-width), so it can't forge log lines.
+     */
     private static String errorMessage(String body) {
         String message;
         try {
@@ -134,7 +137,8 @@ public final class InfisicalClient {
         for (int i = 0; i < message.length() && clean.length() < MAX_MESSAGE_LENGTH; ) {
             int codePoint = message.codePointAt(i);
             i += Character.charCount(codePoint);
-            if (Character.isISOControl(codePoint) || codePoint == 0x2028 || codePoint == 0x2029) {
+            if (Character.isISOControl(codePoint) || codePoint == 0x2028 || codePoint == 0x2029
+                    || Character.getType(codePoint) == Character.FORMAT) {
                 continue;
             }
             if (clean.length() + Character.charCount(codePoint) > MAX_MESSAGE_LENGTH) {

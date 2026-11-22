@@ -44,7 +44,7 @@ public final class InfisicalEnvironmentPostProcessor implements EnvironmentPostP
 
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        Optional<InfisicalSettings> configured = InfisicalSettings.from(environment::getProperty);
+        Optional<InfisicalSettings> configured = InfisicalSettings.from(key -> property(environment, key));
         if (configured.isEmpty()) {
             log.info("Infisical not configured (INFISICAL_CLIENT_ID unset); using environment variables only");
             return;
@@ -62,5 +62,14 @@ public final class InfisicalEnvironmentPostProcessor implements EnvironmentPostP
             sources.addLast(source);
         }
         log.info("Loaded " + secrets.size() + " secrets from Infisical (" + settings + ")");
+    }
+
+    /** Spring's error for an unresolvable placeholder quotes the whole value, so only the key is reported. */
+    private static String property(ConfigurableEnvironment environment, String key) {
+        try {
+            return environment.getProperty(key);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(key + " contains a ${...} placeholder that can't be resolved");
+        }
     }
 }

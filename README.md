@@ -136,6 +136,7 @@ Each request has a 15 second connect timeout, read timeout and overall deadline.
 
 - Secrets, the client ID and the client secret never appear in `toString()`, exception messages or logs. The only server text ever shown is Infisical's own error `message`, cut to 200 characters and stripped of control characters.
 - Redirects are never followed, so credentials and the access token never go to another host.
+- On Java 9 and later, requests ignore any JVM-wide `java.net.Authenticator`, so your application's credentials are never sent to Infisical. Java 8 has no per-connection setting for this: if your application installs a JVM-wide `Authenticator` on Java 8, a server that answers with an authentication challenge could receive its credentials. On Java 8, use an `https` URL and avoid a JVM-wide `Authenticator`, or upgrade.
 - The access token is never stored, and it must be visible ASCII before it's used in a header.
 - Responses are capped at 16 MiB and JSON nesting at 64 levels.
 - TLS uses the JVM's defaults. There's no option to turn certificate checks off.
