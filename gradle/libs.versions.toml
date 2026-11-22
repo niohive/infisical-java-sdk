@@ -1,0 +1,11 @@
+[versions]
+# JUnit 5.x is the last line that runs on Java 8; JUnit 6 needs Java 17.
+junit = "5.14.4"
+# Lowest supported Boot 4 minor; compileOnly, never published.
+spring-boot = "4.0.10"
+
+[libraries]
+junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+spring-boot = { module = "org.springframework.boot:spring-boot", version.ref = "spring-boot" }
