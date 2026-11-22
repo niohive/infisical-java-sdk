@@ -33,8 +33,12 @@ Thanks for helping. This project is deliberately small: it does one job, with no
 - A new test or build dependency needs a good reason in the pull request.
 - Dependencies are locked, and their SHA-256 checksums are verified. After changing one, regenerate both:
 
+  Run it from an **empty Gradle user home**, like CI's. A warm cache hides files a clean build downloads, which then fail verification in CI:
+
   ```sh
-  ./gradlew --write-verification-metadata sha256 resolveAndLockAll --write-locks build
+  export GRADLE_USER_HOME="$(mktemp -d)"
+  cp ~/.gradle/gradle.properties "$GRADLE_USER_HOME/"   # keeps your JDK paths
+  ./gradlew --write-verification-metadata sha256 resolveAndLockAll --write-locks build testAllJdks
   ```
 
   Then review the diff of `gradle/verification-metadata.xml` and the `gradle.lockfile` files: only the artifacts you expected should change. Dependabot can't update these files, so a maintainer does this step for its pull requests too.
