@@ -1,4 +1,4 @@
-rootProject.name = "infisical"
+rootProject.name = "infisical-java-sdk"
 
 dependencyResolutionManagement {
     repositories {

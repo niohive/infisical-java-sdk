@@ -2,7 +2,7 @@
 
 Loads secrets from [Infisical](https://infisical.com) at startup, for any Java 8+ application, with an optional Spring Boot 4 adapter.
 
-> **Pre-release.** Nothing is published to Maven Central yet.
+> Releases are published to [GitHub Packages](https://github.com/orgs/niohive/packages?repo_name=infisical-java-sdk). They aren't on Maven Central yet.
 
 `infisical-env` is an independent client. It is not affiliated with or endorsed by Infisical, Inc.
 
@@ -19,23 +19,74 @@ Loads secrets from [Infisical](https://infisical.com) at startup, for any Java 8
 | `com.niohive:infisical-env-core` | Plain Java, or any framework | Java 8+ |
 | `com.niohive:infisical-env-spring-boot4` | Spring Boot 4 (includes the core) | Java 17+, Spring Boot 4.x |
 
-Gradle:
+### Getting the artifacts from GitHub Packages
+
+GitHub Packages needs a GitHub token to download, even for public packages. Create a [personal access token (classic)](https://github.com/settings/tokens) with only the `read:packages` scope, and keep it out of your repository.
+
+**Gradle.** Put the credentials in `~/.gradle/gradle.properties`:
+
+```properties
+gpr.user=your-github-username
+gpr.key=your-read-packages-token
+```
+
+Then, in `build.gradle.kts`:
 
 ```kotlin
-implementation("com.niohive:infisical-env-core:1.0.0")
-// or, for Spring Boot 4:
-implementation("com.niohive:infisical-env-spring-boot4:1.0.0")
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/niohive/infisical-java-sdk")
+        credentials {
+            username = providers.gradleProperty("gpr.user").get()
+            password = providers.gradleProperty("gpr.key").get()
+        }
+        // Only ever look up this library here.
+        content { includeGroup("com.niohive") }
+    }
+}
+
+dependencies {
+    implementation("com.niohive:infisical-env-core:1.0.0")
+    // or, for Spring Boot 4:
+    implementation("com.niohive:infisical-env-spring-boot4:1.0.0")
+}
 ```
 
-Maven:
+**Maven.** Put the credentials in `~/.m2/settings.xml`:
 
 ```xml
-<dependency>
-  <groupId>com.niohive</groupId>
-  <artifactId>infisical-env-core</artifactId>
-  <version>1.0.0</version>
-</dependency>
+<settings>
+  <servers>
+    <server>
+      <id>github-niohive</id>
+      <username>your-github-username</username>
+      <password>your-read-packages-token</password>
+    </server>
+  </servers>
+</settings>
 ```
+
+Then, in `pom.xml`:
+
+```xml
+<repositories>
+  <repository>
+    <id>github-niohive</id>
+    <url>https://maven.pkg.github.com/niohive/infisical-java-sdk</url>
+  </repository>
+</repositories>
+
+<dependencies>
+  <dependency>
+    <groupId>com.niohive</groupId>
+    <artifactId>infisical-env-core</artifactId>
+    <version>1.0.0</version>
+  </dependency>
+</dependencies>
+```
+
+In GitHub Actions, the built-in `GITHUB_TOKEN` can read the packages if the workflow has `permissions: packages: read`.
 
 ## Configuration
 
@@ -158,3 +209,11 @@ Dependencies are locked, and their SHA-256 checksums are verified. After changin
 ```sh
 ./gradlew --write-verification-metadata sha256 resolveAndLockAll --write-locks build
 ```
+
+## Contributing
+
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md). Report security problems privately, as described in [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE) © 2026 NioHive
