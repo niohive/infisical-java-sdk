@@ -43,3 +43,11 @@ Thanks for helping. This project is deliberately small: it does one job, with no
 
   Then review the diff of `gradle/verification-metadata.xml` and the `gradle.lockfile` files: only the artifacts you expected should change. Dependabot can't update these files, so a maintainer does this step for its pull requests too.
 - GitHub Actions are pinned to full commit SHAs. When updating one, check that the SHA belongs to the release tag in the action's official repository.
+
+## Releases (maintainers)
+
+- Pushing a tag `vX.Y.Z` on `monster` runs `release.yml`. It builds and tests on every JDK without a cache, publishes to GitHub Packages, then signs the artifacts and publishes them to Maven Central. Nothing is ever published from a laptop.
+- To publish an existing tag to Maven Central only, run the **Release** workflow by hand from the Actions tab with that tag.
+- Repository secrets: `MVNC_USERNAME` and `MVNC_PASSWORD` (a Central Portal user token, not the login), `MVNC_GPG_KEY` (the armored private signing key) and `MVNC_GPG_PASSPHRASE`.
+- The signing key is a dedicated NioHive key, used only by the release workflow. Its public key is on `keyserver.ubuntu.com` and `keys.openpgp.org`, and it expires after three years. Before it expires, extend it (`gpg --quick-set-expire`), send the public key to both keyservers again, and update `MVNC_GPG_KEY`. If the key leaks, publish its revocation certificate to both keyservers, make a new key and replace both secrets.
+- A release on Maven Central can't be changed or deleted. Fix mistakes with a new version.
